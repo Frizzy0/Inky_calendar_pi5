@@ -33,24 +33,36 @@ class Calendar:
         self.load_credentials()
     
     def load_credentials(self):
-        with open("/KEY.json") as f:
+        with open("./KEY.json") as f:
             data = json.load(f)
-        self.cal_id = data["calendar_id"]
-        self.credentials = Credentials.from_service_account_file("/KEY.json")
+        self.cal_ids = data.get("calendar_ids", [])
+        self.credentials = Credentials.from_service_account_file("./KEY.json")
         self.service = build("calendar", "v3", credentials=self.credentials)
+
+        
 
 
     def get_events(self, start_time, end_time):
-        events_result = self.service.events().list(
-            calendarId=self.cal_id, timeMin=start_time, timeMax=end_time, singleEvents=True, orderBy="startTime"
-        ).execute()
-        return events_result.get("items", [])
+        all_events = []
+        for cal_id in self.cal_ids:
+            events_result = self.service.events().list(
+                calendarId=cal_id, timeMin=start_time, timeMax=end_time, singleEvents=True, orderBy="startTime"
+            ).execute()
+            events = events_result.get("items", [])
+            # Add calendar ID to each event for later identification
+            for event in events:
+                event['calendarId'] = cal_id
+            all_events.extend(events)
+        # Sort all events by start time
+        all_events.sort(key=lambda x: x.get('start', {}).get('dateTime', x.get('start', {}).get('date', '')))
+        return all_events
 
 
     def populate_events_dict(self, events):
         for event in events:
             start_date, end_date, time, end, location = self.extract_event_details(event)
-            self.add_event_to_dict(start_date, [event["summary"], event["organizer"]["email"], time, end, location])
+            cal_id = event.get('calendarId', '')
+            self.add_event_to_dict(start_date, [event["summary"], cal_id, time, end, location])
 
 
     def extract_event_details(self, event):
@@ -59,14 +71,17 @@ class Calendar:
             end = event["end"]["dateTime"]
             start_date, time = start[:10], start
             end_date, end_time = end[:10], end
-            location = event["location"]
-            print(location)
+            location = event.get("location", "None")
         except KeyError:
-            start_date = event["start"]["date"]
-            end_date = event["end"]["date"]
+            try:
+                start_date = event["start"]["date"]
+                end_date = event["end"]["date"]
+            except KeyError:
+                # Fallback if neither dateTime nor date exists
+                start_date = end_date = "1900-01-01"
             time = "06:00"
             end_time = "06:30"
-            location = "None"
+            location = event.get("location", "None")
         return start_date, end_date, time, end_time, location
 
 
@@ -127,7 +142,7 @@ class Calendar:
                     if len(event[4]) > 30:
                         event[4] = event[4][:29] + ".."
 
-                    if self.cal_id in event[1]:
+                    if self.cal_ids and self.cal_ids[0] in event[1]:
                         text_colour = self.colors['internal_event']
                     else:
                         text_colour = self.colors['external_event']
