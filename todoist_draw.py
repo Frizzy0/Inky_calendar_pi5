@@ -19,13 +19,17 @@ class TodoistModule:
         if task.due is None:
             return "No Due Date"
         
-        if task.due.datetime:
-            try:
-                dt = datetime.fromisoformat(task.due.datetime.replace("Z", "+00:00"))
-            except ValueError:
-                raise ValueError("Invalid datetime format")
+        # The API returns due.datetime as a datetime object in the response
+        if hasattr(task.due, 'datetime') and task.due.datetime:
+            dt = task.due.datetime if isinstance(task.due.datetime, datetime) else datetime.fromisoformat(task.due.datetime.replace("Z", "+00:00"))
         else:
-            dt = datetime.strptime(task.due.date, "%Y-%m-%d")
+            # Fall back to date if datetime is not available - task.due.date is already a date object
+            due_date = task.due.date
+            if isinstance(due_date, str):
+                dt = datetime.strptime(due_date, "%Y-%m-%d")
+            else:
+                # It's already a date object, convert to datetime at midnight
+                dt = datetime.combine(due_date, datetime.min.time())
         
         dt = dt.astimezone()
         day = day.astimezone()
@@ -43,20 +47,28 @@ class TodoistModule:
             return f"{month_day} · {day_of_week}"
         
     def get_todo_tasks(self, day: datetime):
-        tasks = api.get_tasks()
+        tasks_paginator = api.get_tasks()
         items = []
         
-        for task in tasks[:7]:
-            items.append(TodoTask(task.content, self.get_subtext(task, day),task.description))
+        task_count = 0
+        for page in tasks_paginator:
+            for task in page:
+                if task_count >= 7:
+                    break
+                items.append(TodoTask(task.content, self.get_subtext(task, day), task.description))
+                task_count += 1
+            if task_count >= 7:
+                break
+        
+        print("Tasks retrieved:" + str(len(items)))
         return items
 
     def draw_todo_tasks(tasks):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
         img = Image.new('RGB', (400, 240), color='white')
         d = ImageDraw.Draw(img)
-        font_task = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 12)
-        font_title = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 14)
-        font_header = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 20)
+        font_task = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 12)
+        font_title = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 14)
+        font_header = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 20)
         
         d.text((10, 10), "Todoist Tasks", font=font_header, fill='black')
         d.rectangle([(0,0), (400, 240)], outline='black',width=2)
@@ -67,7 +79,7 @@ class TodoistModule:
             d.text((20, 60 + i * 45), task.subtext, font=font_task, fill='black')
             d.text((20, 75 + i * 45), task.description, font=font_task, fill='black')
         
-        image_path = os.path.join(script_dir, 'todoist_image.png')
+        image_path = os.path.join('./todoist_image.png')
         img.save(image_path)
 
 if __name__ == "__main__":

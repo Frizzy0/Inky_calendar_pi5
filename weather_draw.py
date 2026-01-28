@@ -83,7 +83,7 @@ print(f"Current precipitation {current_precipitation}")
 print(f"Current weather_code {current_weather_code}")
 print(f"Current wind_speed_10m {current_wind_speed_10m}")
 print(f"Current relative_humidity_2m {current_relative_humidity_2m}")
-							# Process daily data. The order of variables needs to be the same as requested.
+# Process daily data. The order of variables needs to be the same as requested.
 daily = response.Daily()
 daily_weather_code = daily.Variables(0).ValuesAsNumpy()
 daily_temperature_2m_max = daily.Variables(1).ValuesAsNumpy()
@@ -106,23 +106,20 @@ daily_dataframe = pd.DataFrame(data = daily_data)
 print(daily_dataframe)
 
 def draw_weather():
-    # Create a new image with a white background
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     img = Image.new('RGB', (400, 240), color = "white")
     d = ImageDraw.Draw(img)
     # Load a font
-    font = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 18)
+    font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 18)
     
     # Draw text
     d.text((10, 10), f"Current temperature: {str(current_temperature_2m)[:2]}°F", font=font, fill="black")
     d.text((10, 30), f"Current precipitation: {current_precipitation} inches", font=font, fill="black")
     
     # Add weather image
-    weather_image_path = "C:/Users/frizz/Documents/GitHub/Inky_calendar_pi5/airy/" + weather_code_to_image.get(current_weather_code, "default.png")
+    weather_image_path = "./static/airy/" + weather_code_to_image.get(current_weather_code, "default.png")
     weather_image = Image.open(weather_image_path).convert("RGBA")
     img.paste(weather_image, (300, 20), weather_image)
     
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(script_dir, 'weather_image.png')
-    img.save(image_path)
+    img.save("./weather_image.png")
     # Save the image
+draw_weather()

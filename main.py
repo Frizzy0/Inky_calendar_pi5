@@ -4,6 +4,7 @@ from calendar_draw import Calendar
 from todoist_draw import TodoistModule
 import weather_draw
 import datetime
+import os
 
 def main():
     cal = Calendar()
@@ -20,9 +21,9 @@ def main():
     final_image = Image.new('RGB', (800, 480))
 
     # Open the images created by cal, todo, and weather
-    cal_image = Image.open("C:/Users/frizz/Documents/GitHub/Inky_calendar_pi5/calendar_image.png")
-    todo_image = Image.open("C:/Users/frizz/Documents/GitHub/Inky_calendar_pi5/todoist_image.png")
-    weather_image = Image.open("C:/Users/frizz/Documents/GitHub/Inky_calendar_pi5/weather_image.png")
+    cal_image = Image.open("C:/Users/frizz/Documents/Github/Inky_calendar_pi5/calendar_image.png")
+    todo_image = Image.open("C:/Users/frizz/Documents/Github/Inky_calendar_pi5/todoist_image.png")
+    weather_image = Image.open("C:/Users/frizz/Documents/Github/Inky_calendar_pi5/weather_image.png")
 
     # Paste the images into the final image
     final_image.paste(cal_image, (0, 0))

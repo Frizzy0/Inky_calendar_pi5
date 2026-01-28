@@ -9,7 +9,6 @@ from pprint import pprint
 
 class Calendar:
     def __init__(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
         self.left = 0
         self.right = 400
         self.height = 480
@@ -17,9 +16,9 @@ class Calendar:
         self.box_height = 240
         self.box_width = 200
         self.events_dict = {}
-        self.font = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 24)  # Initialize font
-        self.small_font = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 16)  # Initialize small font
-        self.time_font = ImageFont.truetype(os.path.join(script_dir, "AtkinsonHyperlegible-Regular.ttf"), 12)  # Initialize time font
+        self.font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 24)  # Regular font
+        self.small_font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 16)  #small font
+        self.time_font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 12)  #time font
         self.img = Image.new('RGB', (400, 480), color='white')
         self.d = ImageDraw.Draw(self.img)
         self.colors = {
@@ -34,11 +33,10 @@ class Calendar:
         self.load_credentials()
     
     def load_credentials(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(script_dir, "KEY.json")) as f:
+        with open("/KEY.json") as f:
             data = json.load(f)
         self.cal_id = data["calendar_id"]
-        self.credentials = Credentials.from_service_account_file(os.path.join(script_dir, "KEY.json"))
+        self.credentials = Credentials.from_service_account_file("/KEY.json")
         self.service = build("calendar", "v3", credentials=self.credentials)
 
 
@@ -152,12 +150,7 @@ class Calendar:
             i += 1
 
     def save_image(self):
-        # Get the directory where the Python script is located
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Create the full path for the image file
-        image_path = os.path.join(script_dir, 'calendar_image.png')
-        # Save the image to the script's directory
-        self.img.save(image_path)
+        self.img.save("./calendar_image.png")
 
     def draw_calendar(self):
         self.draw_cal_grid()
