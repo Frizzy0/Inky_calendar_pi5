@@ -3,7 +3,7 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import os
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
@@ -47,9 +47,11 @@ url = "https://api.open-meteo.com/v1/forecast"
 params = {
 	"latitude": 43.5781,
 	"longitude": -70.3217,
-	"daily": ["weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
-	"current": ["temperature_2m", "precipitation", "weather_code", "wind_speed_10m", "relative_humidity_2m"],
-	"wind_speed_unit": "mph",
+	"daily": ["temperature_2m_max", "temperature_2m_min", "wind_speed_10m_max", "wind_gusts_10m_max", "precipitation_probability_max"],
+	"current": ["temperature_2m", "weather_code","apparent_temperature", "relative_humidity_2m"],
+	"timezone": "America/New_York",
+    "forecast_days": 1,
+    "wind_speed_unit": "mph",
 	"temperature_unit": "fahrenheit",
 	"precipitation_unit": "inch"
 }
@@ -68,27 +70,23 @@ current = response.Current()
 
 current_temperature_2m = current.Variables(0).Value()
 
-current_precipitation = current.Variables(1).Value()
-
-current_weather_code = current.Variables(2).Value()
-
-current_wind_speed_10m = current.Variables(3).Value()
-
-current_relative_humidity_2m = current.Variables(4).Value()
+current_weather_code = current.Variables(1).Value()
+current_apparent_temperature = current.Variables(2).Value()
+current_relative_humidity_2m = current.Variables(3).Value()
 
 print(f"Current time {current.Time()}")
 
 print(f"Current temperature_2m {current_temperature_2m}")
-print(f"Current precipitation {current_precipitation}")
 print(f"Current weather_code {current_weather_code}")
-print(f"Current wind_speed_10m {current_wind_speed_10m}")
+print(f"Current apparent_temperature {current_apparent_temperature}")
 print(f"Current relative_humidity_2m {current_relative_humidity_2m}")
 # Process daily data. The order of variables needs to be the same as requested.
 daily = response.Daily()
-daily_weather_code = daily.Variables(0).ValuesAsNumpy()
-daily_temperature_2m_max = daily.Variables(1).ValuesAsNumpy()
-daily_temperature_2m_min = daily.Variables(2).ValuesAsNumpy()
-daily_precipitation_sum = daily.Variables(3).ValuesAsNumpy()
+daily_temperature_2m_max = daily.Variables(0).ValuesAsNumpy()
+daily_temperature_2m_min = daily.Variables(1).ValuesAsNumpy()
+daily_wind_speed_10m_max = daily.Variables(2).ValuesAsNumpy()
+daily_wind_gusts_10m_max = daily.Variables(3).ValuesAsNumpy()
+daily_precipitation_probability_max = daily.Variables(4).ValuesAsNumpy()
 
 daily_data = {"date": pd.date_range(
 	start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
@@ -97,29 +95,46 @@ daily_data = {"date": pd.date_range(
 	inclusive = "left"
 )}
 
-daily_data["weather_code"] = daily_weather_code
 daily_data["temperature_2m_max"] = daily_temperature_2m_max
 daily_data["temperature_2m_min"] = daily_temperature_2m_min
-daily_data["precipitation_sum"] = daily_precipitation_sum
+daily_data["wind_speed_10m_max"] = daily_wind_speed_10m_max
+daily_data["wind_gusts_10m_max"] = daily_wind_gusts_10m_max
+daily_data["precipitation_probability_max"] = daily_precipitation_probability_max
 
 daily_dataframe = pd.DataFrame(data = daily_data)
 print(daily_dataframe)
 
 def draw_weather():
     img = Image.new('RGB', (400, 240), color = "white")
-    d = ImageDraw.Draw(img)
+    #d = ImageDraw.Draw(img)
+    text_layer = Image.new('1', (400, 240), 0)
+    d = ImageDraw.Draw(text_layer)
     # Load a font
-    font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 18)
     
+    font = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 48)
+    font_small = ImageFont.truetype("./AtkinsonHyperlegible-Regular.ttf", 24)
     # Draw text
-    d.text((10, 10), f"Current temperature: {str(current_temperature_2m)[:2]}°F", font=font, fill="black")
-    d.text((10, 30), f"Current precipitation: {current_precipitation} inches", font=font, fill="black")
+    d.text((15, 0), f"{str(current_temperature_2m)[:2]}°F", font=font, fill=1)
+    d.text((130, 15), f"H/L: {str(daily_temperature_2m_max[0])[:2]}/{str(daily_temperature_2m_min[0])[:2]}°F", font=font_small, fill=1)
+    d.text((15, 80), f"Wind: {str(daily_wind_speed_10m_max[0])[:2]} mph", font=font_small, fill=1)
+    d.text((15, 120), f"Gusts: {str(daily_wind_gusts_10m_max[0])[:2]} mph", font=font_small, fill=1)
+    d.text((15, 160), f"Precip: {str(daily_precipitation_probability_max[0])[:2]}%", font=font_small, fill=1)
+    d.text((200, 160), f"Feels like: {str(current_apparent_temperature)[:2]}°F", font=font_small, fill=1)
+    d.text((15, 200), f"Humidity: {str(current_relative_humidity_2m)[:2]}%", font=font_small, fill=0)
     
     # Add weather image
-    weather_image_path = "./static/airy/" + weather_code_to_image.get(current_weather_code, "default.png")
-    weather_image = Image.open(weather_image_path).convert("RGBA")
-    img.paste(weather_image, (300, 20), weather_image)
+    weather_image_path = "./static/airy/" + weather_code_to_image.get(int(current_weather_code), "default.png")
+    weather_image = Image.open(weather_image_path).convert("RGB")
+    img.paste(weather_image, (320, 20), weather_image)
     
+    img.paste((0,0,0), (0,0), mask=text_layer)
+
     img.save("./weather_image.png")
+    #img_clean = clean_text_image(img)
+
+    #img_clean.save("./weather_image.png")
     # Save the image
+
+#def clean_text_image(image):
+#    return image.convert("L").point(lambda x:255 if x>128 else 0).convert("RGB")
 draw_weather()

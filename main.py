@@ -6,6 +6,21 @@ import weather_draw
 import datetime
 import os
 
+Inky_palette =[
+    (0,0,0), # black
+    (255,255,255), # white
+    (255,0,0), # red
+    (0,255,0), # green
+    (0,0,255), # blue
+    (255,255,0), # yellow
+    (255,140,0) # orange
+]
+
+palette_image = Image.new('P', (1, 1))
+flat_palette =[c for color in Inky_palette for c in color] + [0] * (256 * 3 - len(Inky_palette) * 3)
+palette_image.putpalette(flat_palette)
+
+
 def main():
     cal = Calendar()
     start_time = datetime.datetime.now().isoformat() + 'Z'
@@ -30,8 +45,11 @@ def main():
     final_image.paste(todo_image, (400, 0))
     final_image.paste(weather_image, (400, 240))
 
+    final_inkcolor = final_image.quantize(palette=palette_image, dither=Image.Dither.FLOYDSTEINBERG)
+
     # Save the final image
-    final_image.save("final_image.png")
+    final_inkcolor.save("final_image.png")
+    
     inky_display = auto(ask_user=True, verbose=True)
     image = Image.open("final_image.png")
     inky_display.set_image(image)

@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 from datetime import datetime
 
-api = TodoistAPI("")
+api = TodoistAPI("b78e9e0de5d693ac094736fe774d4bfc1cf43472")
 
 class TodoTask:
     def __init__(self, text, subtext,description):

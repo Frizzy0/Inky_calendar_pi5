@@ -102,7 +102,11 @@ class Calendar:
         year = now.year
         month = now.month
 
-        self.d.text((2, 0), calendar.month_name[month][:3].upper() + " " + str(year), font=self.font, fill=self.colors['number'])
+        text = calendar.month_name[month] + " " + str(now.day) + " " + str(year)
+        topdate = self.d.textbbox((0, 0), text, font=self.font)
+        text_width = topdate[2] - topdate[0]
+        x = (self.right - text_width) / 2
+        self.d.text((x, 0), text, font=self.font, fill=self.colors['number'])
 
         weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         today = datetime.datetime.now().date()
@@ -137,8 +141,8 @@ class Calendar:
                 events = self.events_dict[date_str]
                 
                 for j, event in enumerate(events):
-                    if len(event[0]) > 17:
-                        event[0] = event[0][:16] + ".."
+                    if len(event[0]) > 20:
+                        event[0] = event[0][:20]
                     if len(event[4]) > 30:
                         event[4] = event[4][:29] + ".."
 
